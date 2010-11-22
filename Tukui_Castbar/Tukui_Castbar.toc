@@ -1,0 +1,7 @@
+## Interface: 40000
+## Title: |cffC495DDTukui|r |cffffd200Castbar|r
+## Author: Krevlorne
+## Version: 0.01
+## RequiredDeps: Tukui
+
+core.lua
