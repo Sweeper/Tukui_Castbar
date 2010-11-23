@@ -3,18 +3,17 @@
 
 if ( TukuiUF ~= true and ( TukuiCF == nil or TukuiCF["unitframes"] == nil or not TukuiCF["unitframes"]["enable"] ) ) then return; end
 
-local db = TukuiCF["unitframes"];
+local db = TukuiCF["unitframes"]
 if (db.unitcastbar ~= true) then return; end
 
 local function placeCastbar(unit)
-    local normTex = TukuiCF["media"].normTex;
-    local font1 = TukuiCF["media"].uffont;
-    local castbar = nil;
+    local font1 = TukuiCF["media"].uffont
+    local castbar = nil
     
     if (unit == "player") then
-        castbar = oUF_Tukz_player_Castbar;
+        castbar = oUF_Tukz_player_Castbar
     else
-        castbar = oUF_Tukz_target_Castbar;
+        castbar = oUF_Tukz_target_Castbar
     end
 
     local castbarpanel = CreateFrame("Frame", nil, castbar)
@@ -45,11 +44,11 @@ local function placeCastbar(unit)
     end
 
     if (unit == "player") then
-        oUF_Tukz_player_Castbar.Castbar = castbar;    
-        oUF_Tukz_player_Castbar.Castbar.Time = castbar.time;
-        oUF_Tukz_player_Castbar.Castbar.Icon = castbar.icon;
+        oUF_Tukz_player_Castbar.Castbar = castbar    
+        oUF_Tukz_player_Castbar.Castbar.Time = castbar.time
+        oUF_Tukz_player_Castbar.Castbar.Icon = castbar.icon
     else
-        oUF_Tukz_target_Castbar.Castbar = castbar;    
+        oUF_Tukz_target_Castbar.Castbar = castbar
         oUF_Tukz_target_Castbar.Castbar.Time = castbar.time
         oUF_Tukz_target_Castbar.Castbar.Icon = castbar.icon
     end
