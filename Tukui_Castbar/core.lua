@@ -42,6 +42,15 @@ local function placeCastbar(unit)
             castbar.button:SetPoint("RIGHT", TukuiDB.Scale(40), 0)
         end
     end
+    
+    -- cast bar latency
+    local normTex = TukuiCF["media"].normTex;
+    if db.cblatency == true then
+        castbar.safezone = castbar:CreateTexture(nil, "ARTWORK")
+        castbar.safezone:SetTexture(normTex)
+        castbar.safezone:SetVertexColor(0.69, 0.31, 0.31, 0.75)
+        castbar.SafeZone = castbar.safezone
+    end
 
     if (unit == "player") then
         oUF_Tukz_player_Castbar.Castbar = castbar    
