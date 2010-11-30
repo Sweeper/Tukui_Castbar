@@ -1,26 +1,30 @@
--- Standalone Castbar for Tukui by Krevlorne
--- All credits to Tukz and Syne. I just copied most of the stuff shamelessly
+-- Standalone Castbar for Tukui by Krevlorne @ EU-Ulduar
+-- Credits to Tukz, Syne, Elv22 and all other great people of the Tukui community.
 
 if ( TukuiUF ~= true and ( TukuiCF == nil or TukuiCF["unitframes"] == nil or not TukuiCF["unitframes"]["enable"] ) ) then return; end
 
 local db = TukuiCF["unitframes"]
 if (db.unitcastbar ~= true) then return; end
 
+local addon, ns=...
+config = ns.config
+
 local function placeCastbar(unit)
     local font1 = TukuiCF["media"].uffont
     local castbar = nil
+    local castbarpanel = nil
     
     if (unit == "player") then
         castbar = oUF_Tukz_player_Castbar
     else
         castbar = oUF_Tukz_target_Castbar
-    end
+     end
 
-    local castbarpanel = CreateFrame("Frame", nil, castbar)
+    local castbarpanel = CreateFrame("Frame", castbar:GetName().."_Panel", castbar)
     if unit == "player" then
-        TukuiDB.CreatePanel(castbarpanel, 250, 21, "CENTER", UiParent, 0, -200)
+        TukuiDB.CreatePanel(castbarpanel, 250, 21, "CENTER", UIParent, 0, -200)
     else
-        TukuiDB.CreatePanel(castbarpanel, 250, 21, "CENTER", UiParent, 0, -150)
+        TukuiDB.CreatePanel(castbarpanel, 250, 21, "CENTER", UIParent, 0, -150)
     end
     
     castbar:SetPoint("TOPLEFT", castbarpanel, TukuiDB.Scale(2), TukuiDB.Scale(-2))
@@ -61,7 +65,116 @@ local function placeCastbar(unit)
         oUF_Tukz_target_Castbar.Castbar.Time = castbar.time
         oUF_Tukz_target_Castbar.Castbar.Icon = castbar.icon
     end
+
+    castbarpanel:RegisterEvent("ADDON_LOADED")
+    castbarpanel:SetScript("OnEvent", function(self, event, addon)
+        self:UnregisterEvent("ADDON_LOADED")
+        
+        castbarpanel:SetMovable(true)
+        castbarpanel:EnableMouse(true)
+        castbarpanel:SetScript("OnMouseDown", function(self)
+            if button == "LeftButton" and not self.isMoving then
+                self:StartMoving();
+                self.isMoving = true;
+            end
+        end)
+        castbarpanel:SetScript("OnMouseUp", function(self)
+            if button == "LeftButton" and self.isMoving then
+                self:StopMovingOrSizing();
+                self.isMoving = false;
+            end
+        end)
+        castbarpanel:SetScript("OnHide", function(self)
+            if self.isMoving then
+                self:StopMovingOrSizing();
+                self.isMoving = false;
+            end
+        end)
+    end)
 end
 
-placeCastbar("player");
-placeCastbar("target");
+
+if (config.separateplayer) then
+    placeCastbar("player")
+end
+
+if (config.separatetarget) then
+    placeCastbar("target")
+end
+
+
+do
+    local castbarsUnlocked = false
+    
+    local function getPanelsForUnit(unit)
+        local castbarpanel, castbar = nil
+        
+        if unit == "player" then
+            castbarpanel = oUF_Tukz_player_Castbar_Panel
+            castbar      = oUF_Tukz_player_Castbar.Castbar
+        elseif unit == "target" then
+            castbarpanel = oUF_Tukz_target_Castbar_Panel
+            castbar      = oUF_Tukz_target_Castbar.Castbar
+        else
+            print("Cannot get panels for unit: " .. unit)
+            return;
+        end
+        
+        return castbarpanel, castbar
+    end
+    
+    local function unlockCastbarForUnit(unit)
+        local castbarpanel, castbar = getPanelsForUnit(unit)
+        
+        castbarpanel:Show()
+        castbar.Castbar.casting = true
+        castbar.Castbar.max = 1000
+        castbar.Castbar.duration = 1
+        castbar.Castbar.delay = 0
+        castbar.Castbar.Text:SetText(unit)
+        castbar.Castbar:Show()
+        
+        castbarpanel:RegisterForDrag("LeftButton");
+        castbarpanel:SetScript("OnDragStart", castbarpanel.StartMoving);
+        castbarpanel:SetScript("OnDragStop", castbarpanel.StopMovingOrSizing);
+    end
+    
+    local function lockCastbarForUnit(unit)
+        local castbarpanel, castbar = getPanelsForUnit(unit)
+        
+        castbar.Castbar.casting = false
+        castbarpanel:EnableMouse(false);
+    end
+    
+    local function TUKUICASTBARLOCK(param)
+        -- TODO: add param "reset"
+        
+        if castbarsUnlocked == false then
+            castbarsUnlocked = true
+            
+            if config.separateplayer then
+                unlockCastbarForUnit("player")
+            end
+            
+            if config.separatetarget then
+                unlockCastbarForUnit("target")
+            end
+            
+            print("Tukui castbar unlock")
+        elseif castbarsUnlocked == true then
+            if config.separateplayer then
+                lockCastbarForUnit("player")
+            end
+            
+            if config.separatetarget then
+                lockCastbarForUnit("target")
+            end
+            
+            castbarsUnlocked = false
+            print("Tukui castbar lock")
+        end
+    end
+    
+    SLASH_TUKUICASTBAR1 = "/tcb"
+    SlashCmdList["TUKUICASTBAR"] = TUKUICASTBARLOCK
+end
