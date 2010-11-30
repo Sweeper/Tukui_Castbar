@@ -155,7 +155,6 @@ do
     end
     
     local function TUKUICASTBARLOCK(param)
-        -- TODO: add param "reset"
         if param == "reset" then
             resetCastbars()
             return
