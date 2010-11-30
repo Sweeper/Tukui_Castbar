@@ -146,8 +146,20 @@ do
         castbarpanel:EnableMouse(false);
     end
     
+    local function resetCastbars()
+        local castbarpanel, _ = getPanelsForUnit("player")
+        castbarpanel:SetPoint("CENTER", UIParent, 0, -200)
+        castbarpanel, _ = getPanelsForUnit("target")
+        castbarpanel:SetPoint("CENTER", UIParent, 0, -150)
+        return
+    end
+    
     local function TUKUICASTBARLOCK(param)
         -- TODO: add param "reset"
+        if param == "reset" then
+            resetCastbars()
+            return
+        end
         
         if castbarsUnlocked == false then
             castbarsUnlocked = true
