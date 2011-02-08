@@ -9,20 +9,74 @@ if (db.unitcastbar ~= true) then return; end
 local addon, ns=...
 config = ns.config
 
+local channelingTicks = {
+	-- Deathknight
+	[GetSpellInfo(42651)] = 8, 	-- Army of the Dead Ghoul
+	-- Druid
+	[GetSpellInfo(740)] = 5, 	-- Tranquility
+	[GetSpellInfo(16914)] = 10,	-- Hurricane
+	-- Mage
+	[GetSpellInfo(5143)] = 5, 	-- Arcane Missiles
+	[GetSpellInfo(10)] = 8, 	-- Blizzard
+	[GetSpellInfo(12051)] = 4, 	-- Evocation
+	-- Priest
+	[GetSpellInfo(15407)] = 3, 	-- Mind Flay
+	[GetSpellInfo(48045)] = 5, 	-- Mind Sear
+	[GetSpellInfo(47540)] = 3, 	-- Penance
+	[GetSpellInfo(64843)] = 3, 	-- Divine Hymn
+	[GetSpellInfo(64904)] = 3, 	-- Hymn of Hope
+	-- Warlock
+	[GetSpellInfo(1120)] = 6, 	-- Drain Soul
+	[GetSpellInfo(689)] = 3, 	-- Drain Life
+	[GetSpellInfo(5138)] = 3, 	-- Drain Mana
+	[GetSpellInfo(5740)] = 4, 	-- Rain of Fire
+}
+
+local sparkfactory = {
+	__index = function(t,k)
+		local spark = TukuiPlayerCastBar:CreateTexture(nil, 'OVERLAY')
+		t[k] = spark
+		spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
+		spark:SetBlendMode('ADD')
+		spark:SetWidth(15)
+		spark:SetHeight(26)
+		return spark
+	end
+}
+
+local barticks = setmetatable({}, sparkfactory)
+
+local function setBarTicks(ticknum)
+	if( ticknum and ticknum > 0) then
+		local delta = ( (350-4) / ticknum )
+		for k = 1,ticknum do
+			local t = barticks[k]
+			t:ClearAllPoints()
+			t:SetPoint("CENTER", TukuiPlayerCastBar, "LEFT", delta * k, 0 )
+			t:Show()
+		end
+	else
+		barticks[1].Hide = nil
+		for i=1,#barticks do
+			barticks[i]:Hide()
+		end
+	end
+end
+
 local function placeCastbar(unit)
     local font1 = TukuiCF["media"].uffont
     local castbar = nil
     local castbarpanel = nil
     
     if (unit == "player") then
-        castbar = oUF_Tukz_player_Castbar
+        castbar = TukuiPlayerCastBar
     else
-        castbar = oUF_Tukz_target_Castbar
+        castbar = TukuiTargetCastBar
      end
 
     local castbarpanel = CreateFrame("Frame", castbar:GetName().."_Panel", castbar)
     if unit == "player" then
-        TukuiDB.CreatePanel(castbarpanel, 250, 21, "CENTER", UIParent, 0, -200)
+        TukuiDB.CreatePanel(castbarpanel, 350, 26, "CENTER", UIParent, 0, -200)
     else
         TukuiDB.CreatePanel(castbarpanel, 250, 21, "CENTER", UIParent, 0, -150)
     end
@@ -46,50 +100,73 @@ local function placeCastbar(unit)
             castbar.button:SetPoint("RIGHT", TukuiDB.Scale(40), 0)
         end
     end
-    
-    -- cast bar latency
-    local normTex = TukuiCF["media"].normTex;
-    if db.cblatency == true then
-        castbar.safezone = castbar:CreateTexture(nil, "ARTWORK")
-        castbar.safezone:SetTexture(normTex)
-        castbar.safezone:SetVertexColor(0.69, 0.31, 0.31, 0.75)
-        castbar.SafeZone = castbar.safezone
-    end
-
+	
     if (unit == "player") then
-        oUF_Tukz_player_Castbar.Castbar = castbar    
-        oUF_Tukz_player_Castbar.Castbar.Time = castbar.time
-        oUF_Tukz_player_Castbar.Castbar.Icon = castbar.icon
+        TukuiPlayerCastBar.Castbar = castbar    
+        TukuiPlayerCastBar.Castbar.Time = castbar.time
+        TukuiPlayerCastBar.Castbar.Icon = castbar.icon
+		
+		castbarpanel:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+		castbarpanel:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+		castbarpanel:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
+	
+		-- cast bar latency
+		local normTex = TukuiCF["media"].normTex;
+		if db.cblatency == true then
+			castbar.safezone = castbar:CreateTexture(nil, "ARTWORK")
+			castbar.safezone:SetTexture(normTex)
+			--castbar.safezone:SetVertexColor(0.69, 0.31, 0.31, 0.75)
+			castbar.safezone:SetVertexColor(1, 0, 0, 0.50)
+			castbar.SafeZone = castbar.safezone
+		end		
     else
-        oUF_Tukz_target_Castbar.Castbar = castbar
-        oUF_Tukz_target_Castbar.Castbar.Time = castbar.time
-        oUF_Tukz_target_Castbar.Castbar.Icon = castbar.icon
+        TukuiTargetCastBar.Castbar = castbar
+        TukuiTargetCastBar.Castbar.Time = castbar.time
+        TukuiTargetCastBar.Castbar.Icon = castbar.icon
     end
 
     castbarpanel:RegisterEvent("ADDON_LOADED")
-    castbarpanel:SetScript("OnEvent", function(self, event, addon)
-        self:UnregisterEvent("ADDON_LOADED")
-        
-        castbarpanel:SetMovable(true)
-        castbarpanel:EnableMouse(true)
-        castbarpanel:SetScript("OnMouseDown", function(self)
-            if button == "LeftButton" and not self.isMoving then
-                self:StartMoving();
-                self.isMoving = true;
-            end
-        end)
-        castbarpanel:SetScript("OnMouseUp", function(self)
-            if button == "LeftButton" and self.isMoving then
-                self:StopMovingOrSizing();
-                self.isMoving = false;
-            end
-        end)
-        castbarpanel:SetScript("OnHide", function(self)
-            if self.isMoving then
-                self:StopMovingOrSizing();
-                self.isMoving = false;
-            end
-        end)
+    castbarpanel:SetScript("OnEvent", function(self, event, ...)
+		if (event == "ADDON_LOADED") then
+			self:UnregisterEvent("ADDON_LOADED")
+			
+			castbarpanel:SetMovable(true)
+			castbarpanel:EnableMouse(true)
+			castbarpanel:SetScript("OnMouseDown", function(self)
+				if button == "LeftButton" and not self.isMoving then
+					self:StartMoving();
+					self.isMoving = true;
+				end
+			end)
+			castbarpanel:SetScript("OnMouseUp", function(self)
+				if button == "LeftButton" and self.isMoving then
+					self:StopMovingOrSizing();
+					self.isMoving = false;
+				end
+			end)
+			castbarpanel:SetScript("OnHide", function(self)
+				if self.isMoving then
+					self:StopMovingOrSizing();
+					self.isMoving = false;
+				end
+			end)
+		end
+		
+		if event == "UNIT_SPELLCAST_CHANNEL_START" then
+			spell = select(2, ...)
+			
+			local ticks = channelingTicks[spell] or 0
+			
+			setBarTicks(ticks)			
+		end		
+		
+		if (event == "UNIT_SPELLCAST_CHANNEL_STOP") then
+			setBarTicks(0)
+		end		
+		
+		if (event == "UNIT_SPELLCAST_CHANNEL_UPDATE") then
+			setBarTicks(0)
+		end		
     end)
 end
 
@@ -110,11 +187,11 @@ do
         local castbarpanel, castbar = nil
         
         if unit == "player" then
-            castbarpanel = oUF_Tukz_player_Castbar_Panel
-            castbar      = oUF_Tukz_player_Castbar.Castbar
+            castbarpanel = TukuiTargetCastBar_Panel
+            castbar      = TukuiPlayerCastBar.Castbar
         elseif unit == "target" then
-            castbarpanel = oUF_Tukz_target_Castbar_Panel
-            castbar      = oUF_Tukz_target_Castbar.Castbar
+            castbarpanel = TukuiTargetCastBar_Panel
+            castbar      = TukuiTargetCastBar.Castbar
         else
             print("Cannot get panels for unit: " .. unit)
             return;
