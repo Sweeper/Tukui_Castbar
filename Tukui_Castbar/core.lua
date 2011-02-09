@@ -1,12 +1,13 @@
 -- Standalone Castbar for Tukui by Krevlorne @ EU-Ulduar
 -- Credits to Tukz, Syne, Elv22 and all other great people of the Tukui community.
 
-if ( TukuiUF ~= true and ( TukuiCF == nil or TukuiCF["unitframes"] == nil or not TukuiCF["unitframes"]["enable"] ) ) then return; end
+local T, C, L = unpack(Tukui) -- Import: T - functions, constants, variables; C - config; L - locales
 
-local db = TukuiCF["unitframes"]
-if (db.unitcastbar ~= true) then return; end
+if ( TukuiUF ~= true and ( C == nil or C["unitframes"] == nil or not C["unitframes"]["enable"] ) ) then return; end
 
-local addon, ns=...
+if (C["unitframes"].unitcastbar ~= true) then return; end
+
+local _, ns=...
 config = ns.config
 
 local channelingTicks = {
@@ -28,7 +29,6 @@ local channelingTicks = {
 	-- Warlock
 	[GetSpellInfo(1120)] = 6, 	-- Drain Soul
 	[GetSpellInfo(689)] = 3, 	-- Drain Life
-	[GetSpellInfo(5138)] = 3, 	-- Drain Mana
 	[GetSpellInfo(5740)] = 4, 	-- Rain of Fire
 }
 
@@ -93,7 +93,7 @@ local function placeCastbar(unit)
     castbar.Text:SetPoint("LEFT", castbarpanel, "LEFT", TukuiDB.Scale(4), 0)
     castbar.Text:SetTextColor(0.84, 0.75, 0.65)
 
-    if db.cbicons == true then
+    if C["unitframes"].cbicons == true then
         if unit == "player" then
             castbar.button:SetPoint("LEFT", TukuiDB.Scale(-40), 0)
         elseif unit == "target" then
@@ -112,7 +112,7 @@ local function placeCastbar(unit)
 	
 		-- cast bar latency
 		local normTex = TukuiCF["media"].normTex;
-		if db.cblatency == true then
+		if C["unitframes"].cblatency == true then
 			castbar.safezone = castbar:CreateTexture(nil, "ARTWORK")
 			castbar.safezone:SetTexture(normTex)
 			--castbar.safezone:SetVertexColor(0.69, 0.31, 0.31, 0.75)
