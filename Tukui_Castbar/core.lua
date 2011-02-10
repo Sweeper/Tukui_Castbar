@@ -30,6 +30,7 @@ local channelingTicks = {
 	[GetSpellInfo(1120)] = 6, 	-- Drain Soul
 	[GetSpellInfo(689)] = 3, 	-- Drain Life
 	[GetSpellInfo(5740)] = 4, 	-- Rain of Fire
+	[GetSpellInfo(79268)] = 3, 	-- Soul Harvest
 }
 
 local sparkfactory = {
@@ -78,8 +79,9 @@ local function placeCastbar(unit)
     if unit == "player" then
         TukuiDB.CreatePanel(castbarpanel, config.player["width"], config.player["height"], "CENTER", UIParent, 0, config.player["yDistance"])
     else
-        TukuiDB.CreatePanel(castbarpanel, config.target["width"], config.target["height"], "CENTER", UIParent, 0, config.target["height"])
+        TukuiDB.CreatePanel(castbarpanel, config.target["width"], config.target["height"], "CENTER", UIParent, 0, config.target["yDistance"])
     end
+	--table.insert(T.MoverFrames, castbarpanel:GetName())
     
     castbar:SetPoint("TOPLEFT", castbarpanel, TukuiDB.Scale(2), TukuiDB.Scale(-2))
     castbar:SetPoint("BOTTOMRIGHT", castbarpanel, TukuiDB.Scale(-2), TukuiDB.Scale(2))
