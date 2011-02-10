@@ -7,8 +7,11 @@ if ( TukuiUF ~= true and ( C == nil or C["unitframes"] == nil or not C["unitfram
 
 if (C["unitframes"].unitcastbar ~= true) then return; end
 
-local _, ns=...
+local addon, ns=...
 config = ns.config
+
+local player = TukuiPlayerCastBar
+local target = TukuiTargetCastBar
 
 local channelingTicks = {
 	-- Deathknight
@@ -35,11 +38,11 @@ local channelingTicks = {
 
 local sparkfactory = {
 	__index = function(t,k)
-		local spark = TukuiPlayerCastBar:CreateTexture(nil, 'OVERLAY')
+		local spark = player:CreateTexture(nil, 'OVERLAY')
 		t[k] = spark
 		spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
 		spark:SetBlendMode('ADD')
-		spark:SetWidth(15)
+		spark:SetWidth(10)
 		spark:SetHeight(26)
 		return spark
 	end
@@ -53,7 +56,7 @@ local function setBarTicks(ticknum)
 		for k = 1,ticknum do
 			local t = barticks[k]
 			t:ClearAllPoints()
-			t:SetPoint("CENTER", TukuiPlayerCastBar, "LEFT", delta * k, 0 )
+			t:SetPoint("CENTER", player, "LEFT", delta * k, 0 )
 			t:Show()
 		end
 	else
@@ -64,114 +67,164 @@ local function setBarTicks(ticknum)
 	end
 end
 
+function iif(cond, a, b)
+	if cond then
+		return a
+	end
+	return b
+end
+
+local playerAnchor = CreateFrame("Button", "TukuiCastbarPlayerAnchor", UIParent)
+playerAnchor:Width(config.player["width"]) 
+playerAnchor:Height(config.player["height"])
+playerAnchor:SetBackdrop(backdrop)
+playerAnchor:SetBackdropColor(0.25, 0.25, 0.25, 1)
+
+local playerAnchorLabel = playerAnchor:CreateFontString(nil, "ARTWORK")
+playerAnchorLabel:SetFont(C["media"].uffont, 12, "OUTLINE")
+playerAnchorLabel:SetAllPoints(playerAnchor)
+playerAnchorLabel:SetText("Player Castbar")
+playerAnchor:SetMovable(true)
+playerAnchor:SetTemplate("Default")
+playerAnchor:SetAlpha(0)
+playerAnchor:SetBackdropBorderColor(1, 0, 0, 1)
+
+table.insert(T.MoverFrames, playerAnchor)
+playerAnchor.text = {}
+playerAnchor.text.Show = function() playerAnchor:SetAlpha(1) end
+playerAnchor.text.Hide = function() playerAnchor:SetAlpha(0) end
+
+playerAnchor:RegisterEvent("ADDON_LOADED")
+playerAnchor:SetScript("OnEvent", function(frame, event, loadedAddon)
+	if addon ~= loadedAddon then return end
+	playerAnchor:UnregisterEvent("ADDON_LOADED")
+	playerAnchor:Point("CENTER", UIParent, "CENTER", 0, config.player["yDistance"])
+end)
+
+local targetAnchor = CreateFrame("Button", "TukuiCastbarTargetAnchor", UIParent)
+targetAnchor:Width(config.target["width"]) 
+targetAnchor:Height(config.target["height"])
+targetAnchor:SetBackdrop(backdrop)
+targetAnchor:SetBackdropColor(0.25, 0.25, 0.25, 1)
+
+local targetAnchorLabel = targetAnchor:CreateFontString(nil, "ARTWORK")
+targetAnchorLabel:SetFont(C["media"].uffont, 12, "OUTLINE")
+targetAnchorLabel:SetAllPoints(targetAnchor)
+targetAnchorLabel:SetText("Target Castbar")
+targetAnchor:SetMovable(true)
+targetAnchor:SetTemplate("Default")
+targetAnchor:SetAlpha(0)
+targetAnchor:SetBackdropBorderColor(1, 0, 0, 1)
+
+table.insert(T.MoverFrames, targetAnchor)
+targetAnchor.text = {}
+targetAnchor.text.Show = function() targetAnchor:SetAlpha(1) end
+targetAnchor.text.Hide = function() targetAnchor:SetAlpha(0) end
+
+targetAnchor:RegisterEvent("ADDON_LOADED")
+targetAnchor:SetScript("OnEvent", function(frame, event, loadedAddon)
+	if addon ~= loadedAddon then return end
+	targetAnchor:UnregisterEvent("ADDON_LOADED")
+	targetAnchor:Point("CENTER", UIParent, "CENTER", 0, config.target["yDistance"])
+end)
+
 local function placeCastbar(unit)
-    local font1 = TukuiCF["media"].uffont
-    local castbar = nil
-    local castbarpanel = nil
-    
-    if (unit == "player") then
-        castbar = TukuiPlayerCastBar
-    else
-        castbar = TukuiTargetCastBar
-     end
+    local castbar = iif(unit == "player", player, target)
+	local barconfig = iif(unit == "player", config.player, config.target)
 
-    local castbarpanel = CreateFrame("Frame", castbar:GetName().."_Panel", castbar)
-    if unit == "player" then
-        TukuiDB.CreatePanel(castbarpanel, config.player["width"], config.player["height"], "CENTER", UIParent, 0, config.player["yDistance"])
-    else
-        TukuiDB.CreatePanel(castbarpanel, config.target["width"], config.target["height"], "CENTER", UIParent, 0, config.target["yDistance"])
-    end
-	--table.insert(T.MoverFrames, castbarpanel:GetName())
+    local panel = CreateFrame("Frame", castbar:GetName().."Panel", castbar)
+	panel:CreatePanel(config["template"], barconfig["width"], barconfig["height"], "CENTER", iif(unit == "player", playerAnchor, targetAnchor), "CENTER", 0, 0)
     
-    castbar:SetPoint("TOPLEFT", castbarpanel, TukuiDB.Scale(2), TukuiDB.Scale(-2))
-    castbar:SetPoint("BOTTOMRIGHT", castbarpanel, TukuiDB.Scale(-2), TukuiDB.Scale(2))
-
-    castbar.time = TukuiDB.SetFontString(castbar, font1, 12)
-    castbar.time:SetPoint("RIGHT", castbarpanel, "RIGHT", TukuiDB.Scale(-4), 0)
-    castbar.time:SetTextColor(0.84, 0.75, 0.65)
+    castbar:SetPoint("TOPLEFT", panel, T.Scale(2), T.Scale(-2))
+    castbar:SetPoint("BOTTOMRIGHT", panel, T.Scale(-2), T.Scale(2))
+	
+    castbar.time = T.SetFontString(castbar, C.media.uffont, barconfig["fontsize"])
+    castbar.time:SetPoint("RIGHT", panel, "RIGHT", T.Scale(-4), 0)
+    castbar.time:SetTextColor(unpack(barconfig["fontcolor"]))
     castbar.time:SetJustifyH("RIGHT")
 
-    castbar.Text = TukuiDB.SetFontString(castbar, font1, 12)
-    castbar.Text:SetPoint("LEFT", castbarpanel, "LEFT", TukuiDB.Scale(4), 0)
-    castbar.Text:SetTextColor(0.84, 0.75, 0.65)
+    castbar.Text = T.SetFontString(castbar, C.media.uffont, barconfig["fontsize"])
+    castbar.Text:SetPoint("LEFT", panel, "LEFT", T.Scale(4), 0)
+    castbar.Text:SetTextColor(unpack(barconfig["fontcolor"]))
 
     if C["unitframes"].cbicons == true then
-        if unit == "player" then
-            castbar.button:SetPoint("LEFT", TukuiDB.Scale(-40), 0)
-        elseif unit == "target" then
-            castbar.button:SetPoint("RIGHT", TukuiDB.Scale(40), 0)
+		castbar.button:SetTemplate(config["template"])
+		castbar.button:ClearAllPoints()
+
+		if barconfig["iconright"] then
+            castbar.button:SetPoint("RIGHT", T.Scale(40), 0)
+        else
+			castbar.button:SetPoint("LEFT", T.Scale(-40), 0)
         end
     end
 	
     if (unit == "player") then
-        TukuiPlayerCastBar.Castbar = castbar    
-        TukuiPlayerCastBar.Castbar.Time = castbar.time
-        TukuiPlayerCastBar.Castbar.Icon = castbar.icon
+        player.Castbar = castbar    
+        player.Castbar.Time = castbar.time
+        player.Castbar.Icon = castbar.icon
 		
-		castbarpanel:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
-		castbarpanel:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
-		castbarpanel:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
-	
 		-- cast bar latency
 		local normTex = TukuiCF["media"].normTex;
 		if C["unitframes"].cblatency == true then
-			castbar.safezone = castbar:CreateTexture(nil, "ARTWORK")
+			castbar.safezone = castbar:CreateTexture(nil, "OVERLAY")
 			castbar.safezone:SetTexture(normTex)
-			--castbar.safezone:SetVertexColor(0.69, 0.31, 0.31, 0.75)
-			castbar.safezone:SetVertexColor(1, 0, 0, 0.50)
+			castbar.safezone:SetVertexColor(unpack(barconfig["latencycolor"]))
 			castbar.SafeZone = castbar.safezone
 		end		
-    else
+
+		panel.UNIT_SPELLCAST_START = function ()
+			player:SetStatusBarColor(unpack(barconfig["castingcolor"]))
+		end
+		
+		panel.UNIT_SPELLCAST_CHANNEL_START = function (unit, spell)
+			local ticks = channelingTicks[spell] or 0
+			setBarTicks(ticks)			
+			
+			player:SetStatusBarColor(unpack(barconfig["channelingcolor"]))
+		end
+		
+		panel.UNIT_SPELLCAST_CHANNEL_STOP = function ()
+			setBarTicks(0)			
+		end
+	else
         TukuiTargetCastBar.Castbar = castbar
         TukuiTargetCastBar.Castbar.Time = castbar.time
         TukuiTargetCastBar.Castbar.Icon = castbar.icon
-    end
-
-    castbarpanel:RegisterEvent("ADDON_LOADED")
-    castbarpanel:SetScript("OnEvent", function(self, event, ...)
-		if (event == "ADDON_LOADED") then
-			self:UnregisterEvent("ADDON_LOADED")
-			
-			castbarpanel:SetMovable(true)
-			castbarpanel:EnableMouse(true)
-			castbarpanel:SetScript("OnMouseDown", function(self)
-				if button == "LeftButton" and not self.isMoving then
-					self:StartMoving();
-					self.isMoving = true;
-				end
-			end)
-			castbarpanel:SetScript("OnMouseUp", function(self)
-				if button == "LeftButton" and self.isMoving then
-					self:StopMovingOrSizing();
-					self.isMoving = false;
-				end
-			end)
-			castbarpanel:SetScript("OnHide", function(self)
-				if self.isMoving then
-					self:StopMovingOrSizing();
-					self.isMoving = false;
-				end
-			end)
+		
+		--[[
+		panel.UNIT_SPELLCAST_START = function (unit, spell)
+			-- print(UnitCastingInfo(unit))
+			if select(9, UnitCastingInfo(unit)) == 1 then
+				target:SetStatusBarColor(unpack(barconfig["noninterruptablecolor"]))
+			else
+				target:SetStatusBarColor(unpack(barconfig["interruptablecolor"]))
+			end
 		end
 		
-		if event == "UNIT_SPELLCAST_CHANNEL_START" then
-			spell = select(2, ...)
-			
-			local ticks = channelingTicks[spell] or 0
-			
-			setBarTicks(ticks)			
+		panel.UNIT_SPELLCAST_CHANNEL_START = function (unit, spell)
+			if select(8, UnitCastingInfo(unit)) == 1 then
+				target:SetStatusBarColor(unpack(barconfig["noninterruptablecolor"]))
+			else
+				target:SetStatusBarColor(unpack(barconfig["interruptablecolor"]))
+			end
 		end		
 		
-		if (event == "UNIT_SPELLCAST_CHANNEL_STOP") then
-			setBarTicks(0)
+		panel.UNIT_SPELLCAST_INTERRUPTIBLE = function (unit, spell)
+			target:SetStatusBarColor(unpack(barconfig["interruptablecolor"]))
 		end		
-		
-		if (event == "UNIT_SPELLCAST_CHANNEL_UPDATE") then
-			setBarTicks(0)
-		end		
-    end)
-end
 
+		panel.UNIT_SPELLCAST_NOT_INTERRUPTIBLE = function (unit, spell)
+			target:SetStatusBarColor(unpack(barconfig["noninterruptablecolor"]))
+		end	]]	
+    end
+
+	panel:RegisterEvent("UNIT_SPELLCAST_START")
+	panel:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+	panel:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+	panel:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
+	panel:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
+	panel:SetScript("OnEvent", function(self, event, ...) if self[event] then self[event](...) end end)
+end
 
 if (config.separateplayer) then
     placeCastbar("player")
@@ -179,92 +232,4 @@ end
 
 if (config.separatetarget) then
     placeCastbar("target")
-end
-
-
-do
-    local castbarsUnlocked = false
-    
-    local function getPanelsForUnit(unit)
-        local castbarpanel, castbar = nil
-        
-        if unit == "player" then
-            castbarpanel = TukuiTargetCastBar_Panel
-            castbar      = TukuiPlayerCastBar.Castbar
-        elseif unit == "target" then
-            castbarpanel = TukuiTargetCastBar_Panel
-            castbar      = TukuiTargetCastBar.Castbar
-        else
-            print("Cannot get panels for unit: " .. unit)
-            return;
-        end
-        
-        return castbarpanel, castbar
-    end
-    
-    local function unlockCastbarForUnit(unit)
-        local castbarpanel, castbar = getPanelsForUnit(unit)
-        
-        castbarpanel:Show()
-        castbar.Castbar.casting = true
-        castbar.Castbar.max = 1000
-        castbar.Castbar.duration = 1
-        castbar.Castbar.delay = 0
-        castbar.Castbar.Text:SetText(unit)
-        castbar.Castbar:Show()
-        
-        castbarpanel:RegisterForDrag("LeftButton");
-        castbarpanel:SetScript("OnDragStart", castbarpanel.StartMoving);
-        castbarpanel:SetScript("OnDragStop", castbarpanel.StopMovingOrSizing);
-    end
-    
-    local function lockCastbarForUnit(unit)
-        local castbarpanel, castbar = getPanelsForUnit(unit)
-        
-        castbar.Castbar.casting = false
-        castbarpanel:EnableMouse(false);
-    end
-    
-    local function resetCastbars()
-        local castbarpanel, _ = getPanelsForUnit("player")
-        castbarpanel:SetPoint("CENTER", UIParent, 0, -200)
-        castbarpanel, _ = getPanelsForUnit("target")
-        castbarpanel:SetPoint("CENTER", UIParent, 0, -150)
-        return
-    end
-    
-    local function TUKUICASTBARLOCK(param)
-        if param == "reset" then
-            resetCastbars()
-            return
-        end
-        
-        if castbarsUnlocked == false then
-            castbarsUnlocked = true
-            
-            if config.separateplayer then
-                unlockCastbarForUnit("player")
-            end
-            
-            if config.separatetarget then
-                unlockCastbarForUnit("target")
-            end
-            
-            print("Tukui castbar unlock")
-        elseif castbarsUnlocked == true then
-            if config.separateplayer then
-                lockCastbarForUnit("player")
-            end
-            
-            if config.separatetarget then
-                lockCastbarForUnit("target")
-            end
-            
-            castbarsUnlocked = false
-            print("Tukui castbar lock")
-        end
-    end
-    
-    SLASH_TUKUICASTBAR1 = "/tcb"
-    SlashCmdList["TUKUICASTBAR"] = TUKUICASTBARLOCK
 end
