@@ -48,7 +48,7 @@ local barticks = setmetatable({}, sparkfactory)
 
 local function setBarTicks(ticknum)
 	if( ticknum and ticknum > 0) then
-		local delta = ( (350-4) / ticknum )
+		local delta = ( (config.player["width"]-4) / ticknum )
 		for k = 1,ticknum do
 			local t = barticks[k]
 			t:ClearAllPoints()
@@ -76,9 +76,9 @@ local function placeCastbar(unit)
 
     local castbarpanel = CreateFrame("Frame", castbar:GetName().."_Panel", castbar)
     if unit == "player" then
-        TukuiDB.CreatePanel(castbarpanel, 350, 26, "CENTER", UIParent, 0, -200)
+        TukuiDB.CreatePanel(castbarpanel, config.player["width"], config.player["height"], "CENTER", UIParent, 0, config.player["yDistance"])
     else
-        TukuiDB.CreatePanel(castbarpanel, 250, 21, "CENTER", UIParent, 0, -150)
+        TukuiDB.CreatePanel(castbarpanel, config.target["width"], config.target["height"], "CENTER", UIParent, 0, config.target["height"])
     end
     
     castbar:SetPoint("TOPLEFT", castbarpanel, TukuiDB.Scale(2), TukuiDB.Scale(-2))
