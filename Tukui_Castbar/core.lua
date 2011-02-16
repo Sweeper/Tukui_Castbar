@@ -51,12 +51,16 @@ local sparkfactory = {
 local barticks = setmetatable({}, sparkfactory)
 
 local function setBarTicks(ticknum)
+	if config.player["showticks"] ~= true then 
+		return 
+	end
+
 	if( ticknum and ticknum > 0) then
 		local delta = ( (config.player["width"]-4) / ticknum )
-		for k = 1,ticknum do
+		for k = 1, ticknum - 1 do
 			local t = barticks[k]
 			t:ClearAllPoints()
-			t:SetPoint("CENTER", player, "LEFT", delta * k, 0 )
+			t:Point("CENTER", player, "LEFT", delta * k, 0 )
 			t:Show()
 		end
 	else
@@ -74,162 +78,144 @@ function iif(cond, a, b)
 	return b
 end
 
-local playerAnchor = CreateFrame("Button", "TukuiCastbarPlayerAnchor", UIParent)
-playerAnchor:Width(config.player["width"]) 
-playerAnchor:Height(config.player["height"])
-playerAnchor:SetBackdrop(backdrop)
-playerAnchor:SetBackdropColor(0.25, 0.25, 0.25, 1)
-
-local playerAnchorLabel = playerAnchor:CreateFontString(nil, "ARTWORK")
-playerAnchorLabel:SetFont(C["media"].uffont, 12, "OUTLINE")
-playerAnchorLabel:SetAllPoints(playerAnchor)
-playerAnchorLabel:SetText("Player Castbar")
-playerAnchor:SetMovable(true)
-playerAnchor:SetTemplate("Default")
-playerAnchor:SetAlpha(0)
-playerAnchor:SetBackdropBorderColor(1, 0, 0, 1)
-
-table.insert(T.MoverFrames, playerAnchor)
-playerAnchor.text = {}
-playerAnchor.text.Show = function() playerAnchor:SetAlpha(1) end
-playerAnchor.text.Hide = function() playerAnchor:SetAlpha(0) end
-
-playerAnchor:RegisterEvent("ADDON_LOADED")
-playerAnchor:SetScript("OnEvent", function(frame, event, loadedAddon)
-	if addon ~= loadedAddon then return end
-	playerAnchor:UnregisterEvent("ADDON_LOADED")
-	playerAnchor:Point("CENTER", UIParent, "CENTER", 0, config.player["yDistance"])
-end)
-
-local targetAnchor = CreateFrame("Button", "TukuiCastbarTargetAnchor", UIParent)
-targetAnchor:Width(config.target["width"]) 
-targetAnchor:Height(config.target["height"])
-targetAnchor:SetBackdrop(backdrop)
-targetAnchor:SetBackdropColor(0.25, 0.25, 0.25, 1)
-
-local targetAnchorLabel = targetAnchor:CreateFontString(nil, "ARTWORK")
-targetAnchorLabel:SetFont(C["media"].uffont, 12, "OUTLINE")
-targetAnchorLabel:SetAllPoints(targetAnchor)
-targetAnchorLabel:SetText("Target Castbar")
-targetAnchor:SetMovable(true)
-targetAnchor:SetTemplate("Default")
-targetAnchor:SetAlpha(0)
-targetAnchor:SetBackdropBorderColor(1, 0, 0, 1)
-
-table.insert(T.MoverFrames, targetAnchor)
-targetAnchor.text = {}
-targetAnchor.text.Show = function() targetAnchor:SetAlpha(1) end
-targetAnchor.text.Hide = function() targetAnchor:SetAlpha(0) end
-
-targetAnchor:RegisterEvent("ADDON_LOADED")
-targetAnchor:SetScript("OnEvent", function(frame, event, loadedAddon)
-	if addon ~= loadedAddon then return end
-	targetAnchor:UnregisterEvent("ADDON_LOADED")
-	targetAnchor:Point("CENTER", UIParent, "CENTER", 0, config.target["yDistance"])
-end)
-
 local function placeCastbar(unit)
-    local castbar = iif(unit == "player", player, target)
+	local castbar = iif(unit == "player", player, target)
 	local barconfig = iif(unit == "player", config.player, config.target)
-
-    local panel = CreateFrame("Frame", castbar:GetName().."Panel", castbar)
-	panel:CreatePanel(config["template"], barconfig["width"], barconfig["height"], "CENTER", iif(unit == "player", playerAnchor, targetAnchor), "CENTER", 0, 0)
-    
-    castbar:SetPoint("TOPLEFT", panel, T.Scale(2), T.Scale(-2))
-    castbar:SetPoint("BOTTOMRIGHT", panel, T.Scale(-2), T.Scale(2))
 	
-    castbar.time = T.SetFontString(castbar, C.media.uffont, barconfig["fontsize"])
-    castbar.time:SetPoint("RIGHT", panel, "RIGHT", T.Scale(-4), 0)
-    castbar.time:SetTextColor(unpack(barconfig["fontcolor"]))
-    castbar.time:SetJustifyH("RIGHT")
+	local anchor = CreateFrame("Button", castbar:GetName().."PanelAnchor", UIParent)
+	anchor:Width(barconfig["width"]) 
+	anchor:Height(barconfig["height"])
+	anchor:SetBackdrop(backdrop)
+	anchor:SetBackdropColor(0.25, 0.25, 0.25, 1)
 
-    castbar.Text = T.SetFontString(castbar, C.media.uffont, barconfig["fontsize"])
-    castbar.Text:SetPoint("LEFT", panel, "LEFT", T.Scale(4), 0)
-    castbar.Text:SetTextColor(unpack(barconfig["fontcolor"]))
+	local anchorLabel = anchor:CreateFontString(nil, "ARTWORK")
+	anchorLabel:SetFont(C["media"].uffont, 12, "OUTLINE")
+	anchorLabel:SetAllPoints(anchor)
+	anchorLabel:SetText(iif(unit == "player", "Player Castbar", "Target Castbar"))
+	anchor:SetMovable(true)
+	anchor:SetTemplate("Default")
+	anchor:SetBackdropBorderColor(1, 0, 0, 1)
+	anchor:Hide()
 
-    if C["unitframes"].cbicons == true then
+	table.insert(T.MoverFrames, anchor)
+	anchor.text = {}
+	anchor.text.Show = function() anchor:Show() end
+	anchor.text.Hide = function() anchor:Hide() end
+
+	anchor:RegisterEvent("ADDON_LOADED")
+	anchor:SetScript("OnEvent", function(frame, event, loadedAddon)
+		if addon ~= loadedAddon then return end
+		anchor:UnregisterEvent("ADDON_LOADED")
+		anchor:Point("CENTER", UIParent, "CENTER", 0, barconfig["yDistance"])
+	end)
+
+	local panel = CreateFrame("Frame", castbar:GetName().."Panel", castbar)
+	panel:CreatePanel(config["template"], barconfig["width"], barconfig["height"], "CENTER", anchor, "CENTER", 0, 0)
+
+	castbar:Point("TOPLEFT", panel, 2, -2)
+	castbar:Point("BOTTOMRIGHT", panel, -2, 2)
+
+	castbar.time = T.SetFontString(castbar, C.media.uffont, barconfig["fontsize"])
+	castbar.time:Point("RIGHT", panel, "RIGHT", -4, 0)
+	castbar.time:SetTextColor(unpack(barconfig["fontcolor"]))
+	castbar.time:SetJustifyH("RIGHT")
+
+	castbar.Text = T.SetFontString(castbar, C.media.uffont, barconfig["fontsize"])
+	castbar.Text:Point("LEFT", panel, "LEFT", 4, 0)
+	castbar.Text:SetTextColor(unpack(barconfig["fontcolor"]))
+
+	if C["unitframes"].cbicons == true then
 		castbar.button:SetTemplate(config["template"])
 		castbar.button:ClearAllPoints()
 
 		if barconfig["iconright"] then
-            castbar.button:SetPoint("RIGHT", T.Scale(40), 0)
-        else
-			castbar.button:SetPoint("LEFT", T.Scale(-40), 0)
-        end
-    end
-	
-    if (unit == "player") then
-        player.Castbar = castbar    
-        player.Castbar.Time = castbar.time
-        player.Castbar.Icon = castbar.icon
-		
+			castbar.button:Point("RIGHT", 40, 0)
+		else
+			castbar.button:Point("LEFT", -40, 0)
+		end
+	end
+
+	if (unit == "player") then
+		player.Castbar = castbar    
+		player.Castbar.Time = castbar.time
+		player.Castbar.Icon = castbar.icon
+
 		-- cast bar latency
-		local normTex = TukuiCF["media"].normTex;
+		local normTex = C["media"].normTex;
 		if C["unitframes"].cblatency == true then
 			castbar.safezone = castbar:CreateTexture(nil, "OVERLAY")
 			castbar.safezone:SetTexture(normTex)
 			castbar.safezone:SetVertexColor(unpack(barconfig["latencycolor"]))
 			castbar.SafeZone = castbar.safezone
-		end		
+		end
 
-		panel.UNIT_SPELLCAST_START = function ()
+		panel.UNIT_SPELLCAST_START = function (unit)
+			if unit ~= "player" and unit ~= "vehicle" then return end 
 			player:SetStatusBarColor(unpack(barconfig["castingcolor"]))
+			setBarTicks(0)
 		end
-		
+
 		panel.UNIT_SPELLCAST_CHANNEL_START = function (unit, spell)
-			local ticks = channelingTicks[spell] or 0
-			setBarTicks(ticks)			
-			
+			if unit ~= "player" and unit ~= "vehicle" then return end 
 			player:SetStatusBarColor(unpack(barconfig["channelingcolor"]))
-		end
-		
-		panel.UNIT_SPELLCAST_CHANNEL_STOP = function ()
-			setBarTicks(0)			
+			setBarTicks(channelingTicks[spell] or 0)
 		end
 	else
-        TukuiTargetCastBar.Castbar = castbar
-        TukuiTargetCastBar.Castbar.Time = castbar.time
-        TukuiTargetCastBar.Castbar.Icon = castbar.icon
-		
-		--[[
-		panel.UNIT_SPELLCAST_START = function (unit, spell)
-			-- print(UnitCastingInfo(unit))
+		TukuiTargetCastBar.Castbar = castbar
+		TukuiTargetCastBar.Castbar.Time = castbar.time
+		TukuiTargetCastBar.Castbar.Icon = castbar.icon
+
+		panel.UNIT_SPELLCAST_START = function (unit)
+			if unit ~= "target" then return end 
 			if select(9, UnitCastingInfo(unit)) == 1 then
 				target:SetStatusBarColor(unpack(barconfig["noninterruptablecolor"]))
 			else
 				target:SetStatusBarColor(unpack(barconfig["interruptablecolor"]))
 			end
 		end
-		
-		panel.UNIT_SPELLCAST_CHANNEL_START = function (unit, spell)
-			if select(8, UnitCastingInfo(unit)) == 1 then
+
+		panel.UNIT_SPELLCAST_CHANNEL_START = function (unit)
+			if unit ~= "target" then return end 
+			if select(8, UnitChannelInfo(unit)) == 1 then
 				target:SetStatusBarColor(unpack(barconfig["noninterruptablecolor"]))
 			else
 				target:SetStatusBarColor(unpack(barconfig["interruptablecolor"]))
 			end
-		end		
-		
-		panel.UNIT_SPELLCAST_INTERRUPTIBLE = function (unit, spell)
-			target:SetStatusBarColor(unpack(barconfig["interruptablecolor"]))
-		end		
+		end
 
-		panel.UNIT_SPELLCAST_NOT_INTERRUPTIBLE = function (unit, spell)
+		panel.UNIT_SPELLCAST_INTERRUPTIBLE = function (unit)
+			if unit ~= "target" then return end 
+			target:SetStatusBarColor(unpack(barconfig["interruptablecolor"]))
+		end
+
+		panel.UNIT_SPELLCAST_NOT_INTERRUPTIBLE = function (unit)
+			if unit ~= "target" then return end 
 			target:SetStatusBarColor(unpack(barconfig["noninterruptablecolor"]))
-		end	]]	
+		end
+
+		panel.PLAYER_TARGET_CHANGED = function (unit)
+			if UnitCastingInfo("target") ~= nil then
+				panel.UNIT_SPELLCAST_START("target")
+			elseif UnitChannelInfo("target") ~= nil then
+				panel.UNIT_SPELLCAST_CHANNEL_START("target")
+			else
+				target:SetStatusBarColor(unpack(barconfig["fontcolor"]))
+			end
+		end
     end
 
 	panel:RegisterEvent("UNIT_SPELLCAST_START")
 	panel:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
-	panel:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
 	panel:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
 	panel:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
+	panel:RegisterEvent("PLAYER_TARGET_CHANGED")
 	panel:SetScript("OnEvent", function(self, event, ...) if self[event] then self[event](...) end end)
 end
 
 if (config.separateplayer) then
-    placeCastbar("player")
+	placeCastbar("player")
 end
 
 if (config.separatetarget) then
-    placeCastbar("target")
+	placeCastbar("target")
 end
